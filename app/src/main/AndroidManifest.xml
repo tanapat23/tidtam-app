@@ -13,6 +13,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- จับสถานะการโทร เพื่อนับเวลาคุยสายแม่นยำ -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <!-- อ่านชื่อแอปอื่น (Android 11+ ซ่อนไว้) เพื่อแสดงชื่อแอปแทนชื่อแพ็กเกจ -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
