@@ -16,6 +16,10 @@ object Util {
     fun dayKey(millis: Long): String = dayFmt.format(Date(millis))
     fun clock(millis: Long): String = timeFmt.format(Date(millis))
 
+    /** หนีอักขระพิเศษ HTML ของ Telegram (& < >) กันข้อความเพี้ยน */
+    fun esc(s: String): String =
+        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
     /** แปลง ms เป็นข้อความไทย เช่น "1 ชม. 5 นาที" หรือ "45 วินาที" */
     fun humanDuration(ms: Long): String {
         val totalSec = ms / 1000

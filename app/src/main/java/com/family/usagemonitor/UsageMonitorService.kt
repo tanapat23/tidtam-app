@@ -159,7 +159,7 @@ class UsageMonitorService : Service() {
         curStart = ts
         pauseAt = 0L
 
-        telegram?.send("📱 <b>เปิดแอป</b>: $label\n🕐 ${Util.clock(ts)} น.")
+        telegram?.send("📱 <b>เปิดแอป</b>: <code>${Util.esc(label)}</code>\n🕐 ${Util.clock(ts)} น.")
     }
 
     /** ปิดเซสชันที่กำลังเปิดอยู่ (คำนวณเวลา + บันทึก + แจ้งเตือน) */
@@ -192,7 +192,7 @@ class UsageMonitorService : Service() {
         }
 
         if (prefs.notifyOnExit) {
-            telegram?.send("❎ <b>ออกจาก</b> $label\n⏱️ ใช้ไป ${Util.humanDuration(duration)}")
+            telegram?.send("❎ <b>ออกจาก</b> <code>${Util.esc(label)}</code>\n⏱️ ใช้ไป ${Util.humanDuration(duration)}")
         }
     }
 
