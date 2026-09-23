@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="tidtam"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ส่งแจ้งเตือนการเปิด/ออกจากแอป และสรุปรายวันไปที่ Telegram"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/txtStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="สถานะ…"
+            android:padding="12dp"
+            android:background="#22000000"
+            android:layout_marginBottom="20dp" />
+
+        <!-- ขั้นตอนที่ 1: สิทธิ์ -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ขั้นตอนที่ 1 — เปิดสิทธิ์"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnUsageAccess"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="เปิดสิทธิ์ Usage Access" />
+
+        <Button
+            android:id="@+id/btnNotifPermission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ขอสิทธิ์ (แจ้งเตือน + การโทร)" />
+
+        <Button
+            android:id="@+id/btnBattery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ยกเว้นการประหยัดแบต (กันโดนปิด)" />
+
+        <!-- ขั้นตอนที่ 2: Telegram -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ขั้นตอนที่ 2 — ตั้งค่า Telegram"
+            android:textStyle="bold"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/editToken"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Bot Token (จาก @BotFather)"
+            android:inputType="text"
+            android:autofillHints="" />
+
+        <EditText
+            android:id="@+id/editChatId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Chat ID (ปลายทางที่จะรับข้อความ)"
+            android:inputType="text"
+            android:autofillHints="" />
+
+        <Button
+            android:id="@+id/btnTest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ส่งข้อความทดสอบ" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchNotifyExit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="แจ้งเตือนตอนออกจากแอป (พร้อมจำนวนนาที)"
+                android:checked="true" />
+        </LinearLayout>
+
+        <!-- ขั้นตอนที่ 3: เริ่ม -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ขั้นตอนที่ 3 — เริ่มทำงาน"
+            android:textStyle="bold"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnSaveStart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="บันทึกและเริ่มติดตาม" />
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="หยุดติดตาม"
+            android:layout_marginBottom="24dp" />
+
+    </LinearLayout>
+</ScrollView>
