@@ -33,6 +33,24 @@ object Util {
         }
     }
 
+    // จำผลว่าแต่ละแพ็กเกจ "เปิดเองได้ไหม" กันเช็กซ้ำบ่อยๆ
+    private val launchableCache = HashMap<String, Boolean>()
+
+    /**
+     * แอปนี้เป็นแอปที่ผู้ใช้เปิดเองได้จริงไหม (มีไอคอนใน launcher)
+     * ใช้กรองพวก service/แอประบบ ที่แว้บขึ้นหน้าจอเองออกไป ไม่ให้ถูกนับเป็น "เปิดแอป"
+     */
+    fun isLaunchable(context: Context, pkg: String): Boolean {
+        launchableCache[pkg]?.let { return it }
+        val result = try {
+            context.packageManager.getLaunchIntentForPackage(pkg) != null
+        } catch (_: Exception) {
+            true  // เช็กไม่ได้ → ให้ผ่าน (กันเผลอกรองแอปจริงทิ้ง)
+        }
+        launchableCache[pkg] = result
+        return result
+    }
+
     /** ดึงชื่อแอปที่อ่านง่าย จาก package name */
     fun appLabel(context: Context, pkg: String): String {
         // 1) ลองอ่านชื่อจริงจากระบบ (ได้ผลถ้ามีสิทธิ์ QUERY_ALL_PACKAGES)
