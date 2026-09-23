@@ -33,16 +33,65 @@ object Util {
         }
     }
 
+    // จำผลว่าแต่ละแพ็กเกจ "เปิดเองได้ไหม" กันเช็กซ้ำบ่อยๆ
+    private val launchableCache = HashMap<String, Boolean>()
+
+    /**
+     * แอปนี้เป็นแอปที่ผู้ใช้เปิดเองได้จริงไหม (มีไอคอนใน launcher)
+     * ใช้กรองพวก service/แอประบบ ที่แว้บขึ้นหน้าจอเองออกไป ไม่ให้ถูกนับเป็น "เปิดแอป"
+     */
+    fun isLaunchable(context: Context, pkg: String): Boolean {
+        launchableCache[pkg]?.let { return it }
+        val result = try {
+            context.packageManager.getLaunchIntentForPackage(pkg) != null
+        } catch (_: Exception) {
+            true  // เช็กไม่ได้ → ให้ผ่าน (กันเผลอกรองแอปจริงทิ้ง)
+        }
+        launchableCache[pkg] = result
+        return result
+    }
+
     /** ดึงชื่อแอปที่อ่านง่าย จาก package name */
     fun appLabel(context: Context, pkg: String): String {
-        return try {
+        // 1) ลองอ่านชื่อจริงจากระบบ (ได้ผลถ้ามีสิทธิ์ QUERY_ALL_PACKAGES)
+        try {
             val pm = context.packageManager
             val info = pm.getApplicationInfo(pkg, 0)
-            pm.getApplicationLabel(info).toString()
-        } catch (e: PackageManager.NameNotFoundException) {
-            pkg
+            val label = pm.getApplicationLabel(info).toString()
+            if (label.isNotBlank() && label != pkg) return label
+        } catch (_: Exception) {
         }
+        // 2) ระบบอ่านไม่ได้ → ใช้ตารางเทียบแอปยอดนิยม
+        KNOWN_APPS[pkg]?.let { return it }
+        // 3) สุดท้ายจริงๆ คืนชื่อแพ็กเกจ
+        return pkg
     }
+
+    /** ตารางเทียบชื่อแอปยอดนิยม (เผื่อระบบอ่านชื่อไม่ได้) */
+    private val KNOWN_APPS = mapOf(
+        "com.zhiliaoapp.musically" to "TikTok",
+        "com.ss.android.ugc.trill" to "TikTok",
+        "com.facebook.katana" to "Facebook",
+        "com.facebook.lite" to "Facebook Lite",
+        "com.facebook.orca" to "Messenger",
+        "com.instagram.android" to "Instagram",
+        "jp.naver.line.android" to "LINE",
+        "com.google.android.youtube" to "YouTube",
+        "com.google.android.apps.youtube.music" to "YouTube Music",
+        "com.google.android.apps.maps" to "Google Maps",
+        "com.google.android.gm" to "Gmail",
+        "com.android.chrome" to "Chrome",
+        "com.whatsapp" to "WhatsApp",
+        "com.twitter.android" to "X",
+        "com.x.android" to "X",
+        "com.shopee.th" to "Shopee",
+        "com.lazada.android" to "Lazada",
+        "com.linecorp.linetv" to "LINE TV",
+        "com.netflix.mediaclient" to "Netflix",
+        "com.spotify.music" to "Spotify",
+        "com.google.android.googlequicksearchbox" to "Google",
+        "com.android.vending" to "Play Store"
+    )
 
     /**
      * รายชื่อแพ็กเกจที่ไม่ต้องนับ/ไม่ต้องแจ้ง:

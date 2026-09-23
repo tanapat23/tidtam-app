@@ -136,6 +136,10 @@ class UsageMonitorService : Service() {
                             if (curPkg != null && pauseAt == 0L) pauseAt = ts
                         }
 
+                        // แอป/คอมโพเนนต์เบื้องหลังที่ผู้ใช้ไม่ได้เปิดเอง (ไม่มีไอคอน)
+                        // → ข้าม ไม่นับ และไม่แตะแอปที่กำลังดูอยู่
+                        !Util.isLaunchable(this, pkg) -> { /* ข้าม */ }
+
                         // เปลี่ยนไปแอปอื่นจริง → ปิดตัวเก่า แล้วเปิดตัวใหม่
                         else -> {
                             finalizeClose(if (pauseAt > 0L) pauseAt else ts)
@@ -267,7 +271,7 @@ class UsageMonitorService : Service() {
         private const val POLL_INTERVAL_MS = 1500L
 
         // ช่วงผ่อนผัน: ออกจากแอปแล้วกลับเข้าเดิมภายในเวลานี้ = ไม่นับว่าออก
-        private const val GRACE_MS = 2500L
+        private const val GRACE_MS = 1000L
 
         fun start(context: Context) {
             val i = Intent(context, UsageMonitorService::class.java)
