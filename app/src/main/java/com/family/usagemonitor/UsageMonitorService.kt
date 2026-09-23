@@ -267,7 +267,7 @@ class UsageMonitorService : Service() {
         private const val POLL_INTERVAL_MS = 1500L
 
         // ช่วงผ่อนผัน: ออกจากแอปแล้วกลับเข้าเดิมภายในเวลานี้ = ไม่นับว่าออก
-        private const val GRACE_MS = 2500L
+        private const val GRACE_MS = 1000L
 
         fun start(context: Context) {
             val i = Intent(context, UsageMonitorService::class.java)
