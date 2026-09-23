@@ -53,11 +53,16 @@ class UsageMonitorService : Service() {
     private var curLabel: String? = null
     private var curStart = 0L
 
+    // เวลาที่ "เริ่มดูเหมือนจะออก" (ยังไม่ยืนยัน) — ถ้ากลับเข้าแอปเดิมทันจะยกเลิก
+    // 0 = กำลังใช้อยู่ปกติ, >0 = อยู่ในช่วงผ่อนผันรอดูว่าจะออกจริงไหม
+    private var pauseAt = 0L
+
     // เมื่อล็อกหน้าจอ = ถือว่าออกจากแอป
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-                scope.launch { closeCurrent(System.currentTimeMillis()) }
+                val closeTs = if (pauseAt > 0L) pauseAt else System.currentTimeMillis()
+                scope.launch { finalizeClose(closeTs) }
             }
         }
     }
@@ -101,6 +106,10 @@ class UsageMonitorService : Service() {
                 val now = System.currentTimeMillis()
                 processEvents(lastQueryTime, now)
                 lastQueryTime = now
+                // ถ้าอยู่ในช่วงผ่อนผันแล้วครบเวลา = ออกจริง → ปิดเซสชัน
+                if (curPkg != null && pauseAt > 0L && now - pauseAt >= GRACE_MS) {
+                    finalizeClose(pauseAt)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "pollLoop error", e)
             }
@@ -117,35 +126,44 @@ class UsageMonitorService : Service() {
             val ts = e.timeStamp
             when (e.eventType) {
                 RESUMED -> {
-                    if (pkg in ignore) {
-                        // ไปหน้าโฮม / ระบบ = ออกจากแอปที่ดูอยู่
-                        closeCurrent(ts)
-                    } else {
-                        handleForeground(pkg, ts)
+                    when {
+                        // กลับเข้าแอปเดิม (เช่น กดย้อนกลับใน activity เดียวกัน
+                        // หรือแวะออกแล้วรีบกลับ) → ยกเลิกการออก ถือว่าใช้ต่อเนื่อง
+                        pkg == curPkg -> pauseAt = 0L
+
+                        // ไปหน้าโฮม/ระบบ → ยังไม่ปิดทันที ตั้งช่วงผ่อนผันไว้ก่อน
+                        pkg in ignore -> {
+                            if (curPkg != null && pauseAt == 0L) pauseAt = ts
+                        }
+
+                        // เปลี่ยนไปแอปอื่นจริง → ปิดตัวเก่า แล้วเปิดตัวใหม่
+                        else -> {
+                            finalizeClose(if (pauseAt > 0L) pauseAt else ts)
+                            openApp(pkg, ts)
+                        }
                     }
                 }
                 PAUSED -> {
-                    if (pkg == curPkg) closeCurrent(ts)
+                    // แอปปัจจุบันหยุดแสดงผล → ตั้งช่วงผ่อนผัน (ยังไม่แจ้ง)
+                    if (pkg == curPkg && pauseAt == 0L) pauseAt = ts
                 }
             }
         }
     }
 
-    /** มีแอปใหม่ขึ้นมาอยู่หน้าจอ */
-    private suspend fun handleForeground(pkg: String, ts: Long) {
-        if (pkg == curPkg) return               // ยังแอปเดิม ไม่ต้องทำอะไร
-        if (curPkg != null) closeCurrent(ts)     // ปิดแอปก่อนหน้าให้เรียบร้อย
-
+    /** มีแอปใหม่ขึ้นมาอยู่หน้าจอ (แจ้งเตือนเปิดแอป) */
+    private suspend fun openApp(pkg: String, ts: Long) {
         val label = Util.appLabel(this, pkg)
         curPkg = pkg
         curLabel = label
         curStart = ts
+        pauseAt = 0L
 
         telegram?.send("📱 <b>เปิดแอป</b>: $label\n🕐 ${Util.clock(ts)} น.")
     }
 
     /** ปิดเซสชันที่กำลังเปิดอยู่ (คำนวณเวลา + บันทึก + แจ้งเตือน) */
-    private suspend fun closeCurrent(endTs: Long) {
+    private suspend fun finalizeClose(endTs: Long) {
         val pkg = curPkg ?: return
         val label = curLabel ?: pkg
         val start = curStart
@@ -153,6 +171,7 @@ class UsageMonitorService : Service() {
         curPkg = null
         curLabel = null
         curStart = 0L
+        pauseAt = 0L
 
         val duration = endTs - start
         if (duration < prefs.minSessionMs) return   // สั้นเกินไป ข้าม
@@ -246,6 +265,9 @@ class UsageMonitorService : Service() {
         private const val CHANNEL_ID = "usage_monitor_fg"
         private const val FG_ID = 1001
         private const val POLL_INTERVAL_MS = 1500L
+
+        // ช่วงผ่อนผัน: ออกจากแอปแล้วกลับเข้าเดิมภายในเวลานี้ = ไม่นับว่าออก
+        private const val GRACE_MS = 2500L
 
         fun start(context: Context) {
             val i = Intent(context, UsageMonitorService::class.java)
