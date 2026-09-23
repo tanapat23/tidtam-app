@@ -121,6 +121,12 @@
             android:text="บันทึกและเริ่มติดตาม" />
 
         <Button
+            android:id="@+id/btnTestSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ส่งสรุปของวันนี้ (ทดสอบ)" />
+
+        <Button
             android:id="@+id/btnStop"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

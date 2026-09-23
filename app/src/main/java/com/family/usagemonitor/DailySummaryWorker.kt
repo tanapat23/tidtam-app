@@ -13,7 +13,7 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
- * งานที่รันทุกเที่ยงคืน: สรุปการใช้แอป "ของวันที่เพิ่งจบไป" แล้วส่งไป Telegram
+ * งานที่รันประมาณเที่ยงคืน: สรุปการใช้แอปของวันแล้วส่งไป Telegram
  */
 class DailySummaryWorker(
     appContext: Context,
@@ -21,48 +21,65 @@ class DailySummaryWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val prefs = Prefs(applicationContext)
-        if (!prefs.isConfigured) return Result.success()
-
-        val db = AppDatabase.get(applicationContext)
-
-        // วันที่เพิ่งจบไป = วันนี้ - 1 วัน (เพราะรันตอนหลังเที่ยงคืน)
-        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
-        val dayKey = Util.dayKey(cal.timeInMillis)
-
-        val stats = db.sessionDao().summarizeDay(dayKey)
-        val telegram = TelegramClient(prefs.botToken, prefs.chatId)
-
-        val message = buildString {
-            append("🌙 <b>สรุปการใช้แอปประจำวัน</b>\n")
-            append("📅 $dayKey\n\n")
-            if (stats.isEmpty()) {
-                append("วันนี้ไม่มีการใช้งานที่บันทึกไว้")
-            } else {
-                var totalMs = 0L
-                var totalOpens = 0
-                stats.forEachIndexed { i, s ->
-                    totalMs += s.totalMs
-                    totalOpens += s.openCount
-                    append("${i + 1}. <b><code>${Util.esc(s.appLabel)}</code></b>\n")
-                    append("    • เปิด ${s.openCount} ครั้ง\n")
-                    append("    • รวม ${Util.humanDuration(s.totalMs)}\n")
-                }
-                append("\n━━━━━━━━━━\n")
-                append("รวมทั้งหมด: เปิด $totalOpens ครั้ง, ${Util.humanDuration(totalMs)}")
-            }
-        }
-        telegram.send(message)
+        // ส่งสรุปของวันที่ถูกต้อง (กันกรณี WorkManager เด้งก่อน/หลังเที่ยงคืน)
+        sendSummary(applicationContext, targetDayKey())
 
         // ลบข้อมูลเก่ากว่า 30 วัน กันฐานข้อมูลบวม
         val old = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -30) }
-        db.sessionDao().deleteOlderThan(Util.dayKey(old.timeInMillis))
+        AppDatabase.get(applicationContext)
+            .sessionDao().deleteOlderThan(Util.dayKey(old.timeInMillis))
 
         return Result.success()
     }
 
     companion object {
         private const val WORK_NAME = "daily_summary"
+
+        /**
+         * เลือกวันที่จะสรุปจาก "เวลาที่รันจริง":
+         *  - รันช่วงค่ำ (ก่อนเที่ยงคืน, ชั่วโมง >= 12) → สรุปวันนี้ (วันที่กำลังจะจบ)
+         *  - รันช่วงเช้ามืด (หลังเที่ยงคืน) → สรุปเมื่อวาน (วันที่เพิ่งจบ)
+         * ทำให้ดึงข้อมูลถูกวันเสมอ ไม่ว่า WorkManager จะเด้งก่อนหรือหลังเที่ยงคืน
+         */
+        fun targetDayKey(): String {
+            val now = Calendar.getInstance()
+            val cal = now.clone() as Calendar
+            if (now.get(Calendar.HOUR_OF_DAY) < 12) {
+                cal.add(Calendar.DAY_OF_YEAR, -1)
+            }
+            return Util.dayKey(cal.timeInMillis)
+        }
+
+        /** สร้างข้อความสรุปของวัน dayKey แล้วส่งไป Telegram (ใช้ทั้งงานอัตโนมัติและปุ่มทดสอบ) */
+        suspend fun sendSummary(context: Context, dayKey: String): Boolean {
+            val prefs = Prefs(context)
+            if (!prefs.isConfigured) return false
+
+            val db = AppDatabase.get(context)
+            val stats = db.sessionDao().summarizeDay(dayKey)
+            val telegram = TelegramClient(prefs.botToken, prefs.chatId)
+
+            val message = buildString {
+                append("🌙 <b>สรุปการใช้แอปประจำวัน</b>\n")
+                append("📅 $dayKey\n\n")
+                if (stats.isEmpty()) {
+                    append("ไม่มีการใช้งานที่บันทึกไว้ในวันนี้")
+                } else {
+                    var totalMs = 0L
+                    var totalOpens = 0
+                    stats.forEachIndexed { i, s ->
+                        totalMs += s.totalMs
+                        totalOpens += s.openCount
+                        append("${i + 1}. <b><code>${Util.esc(s.appLabel)}</code></b>\n")
+                        append("    • เปิด ${s.openCount} ครั้ง\n")
+                        append("    • รวม ${Util.humanDuration(s.totalMs)}\n")
+                    }
+                    append("\n━━━━━━━━━━\n")
+                    append("รวมทั้งหมด: เปิด $totalOpens ครั้ง, ${Util.humanDuration(totalMs)}")
+                }
+            }
+            return telegram.send(message)
+        }
 
         /** ตั้งให้รันทุกวันเวลาประมาณเที่ยงคืน (00:05) */
         fun schedule(context: Context) {

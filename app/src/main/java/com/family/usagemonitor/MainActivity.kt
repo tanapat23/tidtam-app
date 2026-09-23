@@ -61,10 +61,26 @@ class MainActivity : AppCompatActivity() {
 
         b.btnSaveStart.setOnClickListener { saveAndStart() }
 
+        b.btnTestSummary.setOnClickListener { sendTodaySummary() }
+
         b.btnStop.setOnClickListener {
             UsageMonitorService.stop(this)
             toast("หยุดการติดตามแล้ว")
             refreshStatus()
+        }
+    }
+
+    private fun sendTodaySummary() {
+        if (!prefs.isConfigured) {
+            toast("ใส่ Token และ Chat ID ก่อน")
+            return
+        }
+        val today = Util.dayKey(System.currentTimeMillis())
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                DailySummaryWorker.sendSummary(this@MainActivity, today)
+            }
+            toast(if (ok) "ส่งสรุปของวันนี้แล้ว — เช็ก Telegram" else "ส่งไม่สำเร็จ ตรวจการตั้งค่า/เน็ต")
         }
     }
 
