@@ -44,7 +44,7 @@ class DailySummaryWorker(
                 stats.forEachIndexed { i, s ->
                     totalMs += s.totalMs
                     totalOpens += s.openCount
-                    append("${i + 1}. <b>${s.appLabel}</b>\n")
+                    append("${i + 1}. <b><code>${Util.esc(s.appLabel)}</code></b>\n")
                     append("    • เปิด ${s.openCount} ครั้ง\n")
                     append("    • รวม ${Util.humanDuration(s.totalMs)}\n")
                 }
