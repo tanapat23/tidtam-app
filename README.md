@@ -1,54 +1,114 @@
-# ติดตามการใช้แอป (Usage Monitor)
+# 📱 tidtam — App Usage & Call Monitor
 
-แอป Android ที่แจ้งเตือนผ่าน **Telegram** เมื่อมีการเปิด/ออกจากแอปในโทรศัพท์ พร้อมสรุปการใช้งานรายวันตอนเที่ยงคืน
+> A native Android app that reports a phone's app-usage and call activity to **Telegram** in real time, with an automatic daily summary at midnight.
+> Built with Android's official `UsageStatsManager` (the same API Digital Wellbeing uses) — **no screen scraping, no spyware**.
 
-> ใช้ `UsageStatsManager` (API ทางการของ Android — ตัวเดียวกับ Digital Wellbeing)
-> **ไม่ได้อ่านหน้าจอ** และต้องกดอนุญาต "Usage Access" บนเครื่องแบบเปิดเผย
-> เหมาะกับการดูแลคนในครอบครัว — ควรให้เจ้าของเครื่องรับรู้ด้วย
-
----
-
-## ฟีเจอร์
-- 📱 แจ้งเตือนทุกครั้งที่ **เปิดแอป** (บอกชื่อแอป + เวลา)
-- ❎ แจ้งเตือนตอน **ออกจากแอป** พร้อมจำนวนเวลาที่ใช้ (เปิด/ปิดได้)
-- 📞 **จับเวลาโทรแยกต่างหาก** — โทรออก/รับสาย/สายไม่ได้รับ นับเวลาคุยจริงแม้จอดับ (ใช้ call state ไม่ผ่านหน้าจอ)
-- 🌙 **สรุปรายวันตอนเที่ยงคืน**: แต่ละแอป (และการโทร) เปิดกี่ครั้ง รวมเวลาเท่าไร
-- ⏹️ นับเฉพาะแอปที่อยู่เต็มหน้าจอจริง → **ป๊อปอัพเล็ก (PiP) ของ YouTube และ Google Maps นำทางพื้นหลัง จะไม่ถูกนับ** (หยุดนับทันทีที่ออกจากแอป)
-
-## ข้อจำกัดที่จับไม่ได้
-- **เฮดแชท / บับเบิลลอย (Messenger chat heads)** ที่เด้งทับแอปอื่น — Android ไม่รายงานให้แอปใดอ่านได้เลย จับได้เฉพาะตอนเปิด Messenger เต็มจอ
+![Platform](https://img.shields.io/badge/platform-Android-brightgreen)
+![Language](https://img.shields.io/badge/language-Kotlin-blue)
+![minSdk](https://img.shields.io/badge/minSdk-26-orange)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
 
-## วิธี build
-1. เปิดโฟลเดอร์นี้ด้วย **Android Studio** (เวอร์ชันล่าสุด) แล้วรอ Gradle sync
-2. เมนู **Build → Build APK(s)** จะได้ไฟล์ที่ `app/build/outputs/apk/`
-3. ก๊อป APK ไปติดตั้งบนเครื่องเป้าหมาย (เปิด "ติดตั้งจากแหล่งที่ไม่รู้จัก" ก่อน)
+## ✨ Features
 
-> ต้องมี Android SDK; ถ้า Android Studio ถาม `local.properties` ให้กด sync ให้มันสร้าง `sdk.dir` ให้อัตโนมัติ
-
----
-
-## ตั้งค่า Telegram Bot (ทำครั้งเดียว)
-1. เปิด Telegram หา **@BotFather** → พิมพ์ `/newbot` → ตั้งชื่อ → จะได้ **Bot Token** (เช่น `123456:ABC-xyz...`)
-2. หา **Chat ID** ของปลายทางที่จะรับข้อความ (เครื่องคุณ):
-   - แชตหาบอทที่เพิ่งสร้าง แล้วพิมพ์อะไรก็ได้ 1 ข้อความ
-   - เปิดเบราว์เซอร์ไปที่ `https://api.telegram.org/bot<TOKEN>/getUpdates`
-   - มองหา `"chat":{"id": ... }` — เลขนั้นคือ Chat ID
-   - (ถ้าอยากส่งเข้ากลุ่ม: เพิ่มบอทเข้ากลุ่มก่อน แล้วดู id ที่เป็นเลขติดลบ)
+- 📱 **App open/close alerts** — Telegram message when an app is opened, and when it's closed (with time spent).
+- 📞 **Accurate call tracking** — incoming / outgoing / missed calls with real talk-time, measured from the system call state so it stays correct **even when the screen is off**.
+- 🌙 **Daily summary at midnight** — per-app open counts and total time, delivered automatically via WorkManager.
+- ⏹️ **Real screen-time only** — counts only the truly-foreground app, so YouTube Picture-in-Picture popups and background Google Maps navigation **don't inflate the numbers**.
+- 💾 **Local-first storage** — sessions kept in a Room database on-device; auto-prunes data older than 30 days.
 
 ---
 
-## วิธีใช้บนเครื่องเป้าหมาย
-1. เปิดแอป → **ขั้นตอนที่ 1**: กดเปิด *Usage Access*, *สิทธิ์แจ้งเตือน*, และ *ยกเว้นประหยัดแบต*
-2. **ขั้นตอนที่ 2**: ใส่ Bot Token + Chat ID → กด **ส่งข้อความทดสอบ** (เช็กว่ามีข้อความเข้า Telegram)
-3. **ขั้นตอนที่ 3**: กด **บันทึกและเริ่มติดตาม**
-4. เสร็จ — จากนี้ข้อความจะส่งเข้า Telegram อัตโนมัติ และสรุปรายวันจะมาตอนเที่ยงคืน
+## 🏗️ Architecture
+
+```
+┌──────────────────────────────┐        ┌────────────────────┐
+│        Monitored phone        │        │     Your phone     │
+│                               │        │                    │
+│  UsageMonitorService (FGS)    │        │                    │
+│   ├─ UsageStatsManager poll ──┼─ HTTP ─┼──►  Telegram Bot   │
+│   ├─ CallTracker (call state) │        │    (you read here) │
+│   └─ Room DB (history)        │        │                    │
+│                               │        │                    │
+│  DailySummaryWorker ──────────┼─ 00:05 ┼──►  daily summary  │
+└──────────────────────────────┘        └────────────────────┘
+```
+
+| Layer | Tech |
+|-------|------|
+| Language | **Kotlin**, Coroutines |
+| Usage detection | `UsageStatsManager` (foreground `RESUMED`/`PAUSED` events, 1.5 s poll) |
+| Call detection | `TelephonyCallback` (API 31+) / `PhoneStateListener` (legacy) |
+| Background exec | Foreground **Service** + **WorkManager** (daily job) |
+| Storage | **Room** (SQLite) |
+| Networking | **OkHttp** → Telegram Bot API |
+| UI | View Binding, Material 3 |
 
 ---
 
-## หมายเหตุ / ข้อจำกัด
-- บาง ROM (Xiaomi/Oppo/Vivo/Samsung) ชอบปิด background service — ควรเปิด **Autostart** และตั้งแอปเป็น "ไม่จำกัด" ในเมนูแบต
-- `UsageStatsManager` มีดีเลย์เล็กน้อย (ไม่ใช่เรียลไทม์ทุกวินาที) — ปกติสำหรับงานลักษณะนี้
-- เซสชันที่สั้นกว่า 3 วินาที จะไม่ถูกนับ/แจ้ง (กันสแปมตอนสลับแอปผ่าน ๆ)
-- ข้อมูลเก่ากว่า 30 วันจะถูกลบอัตโนมัติ
+## 🔍 Engineering highlights
+
+A few design decisions worth calling out:
+
+- **Chose the right API over the obvious one.** The naive approach — reading the screen — is fragile and invasive. `UsageStatsManager` yields exactly the "which app / how long" data through a permission the user explicitly grants.
+- **Picture-in-Picture is handled for free.** Because time is counted only for the full-screen foreground activity, a YouTube PiP bubble or backgrounded Maps navigation automatically stops the timer the moment the user leaves the app.
+- **Calls are tracked out-of-band.** Screen-based timing would under-count calls (the screen turns off against the ear), so call duration is measured from `CALL_STATE` transitions instead, and the dialer package is excluded from the usage poll to avoid double counting.
+- **Survives reboots and OEM battery killers** via a `BOOT_COMPLETED` receiver, a sticky foreground service, and a battery-optimization opt-out prompt.
+
+---
+
+## 🚀 Build & Run
+
+1. Open the project in **Android Studio** (latest) and let Gradle sync.
+2. **Build → Build APK(s)** → the APK lands in `app/build/outputs/apk/debug/`.
+3. Install the APK on the target device (enable "install from unknown sources").
+
+### Telegram setup (one-time)
+1. Message **@BotFather** on Telegram → `/newbot` → get the **Bot Token**.
+2. Send your bot any message, then open
+   `https://api.telegram.org/bot<TOKEN>/getUpdates` and read the `"chat":{"id": ...}` value — that's your **Chat ID**.
+3. In the app: grant permissions → paste Token + Chat ID → **Send test message** → **Start**.
+
+---
+
+## ⚠️ Limitations
+
+- `UsageStatsManager` has a small delay (not per-second real time) — fine for this use case.
+- **Messenger chat-head / floating bubble overlays are not reported by Android to any app**, so overlay chatting can't be tracked — only full-screen Messenger counts.
+- Some OEM ROMs (Xiaomi/Oppo/Vivo) aggressively kill background services; enable Autostart + set battery to "unrestricted".
+
+---
+
+## 🔐 Privacy & intended use
+
+This is a **family-care / personal project**: it requires the "Usage Access" permission to be granted **on the monitored device itself** — it cannot be installed covertly, and the person being monitored should be aware. The Telegram token is entered at runtime and stored on-device; **no credentials or personal data are committed to this repository**.
+
+---
+
+## 📄 License
+
+[MIT](LICENSE) © Tanapat Chaithong
+
+---
+
+<a name="thai"></a>
+
+# 🇹🇭 ภาษาไทย
+
+แอป Android ที่แจ้งเตือนการใช้แอปและการโทรของโทรศัพท์เครื่องหนึ่งไปยัง **Telegram** แบบเรียลไทม์ พร้อมสรุปการใช้งานอัตโนมัติทุกเที่ยงคืน — ใช้ `UsageStatsManager` (API ทางการ ตัวเดียวกับ Digital Wellbeing) **ไม่ได้อ่าน/แคปหน้าจอ**
+
+### ฟีเจอร์
+- 📱 แจ้งเตือนตอนเปิด/ออกจากแอป (พร้อมจำนวนนาที)
+- 📞 จับเวลาโทรแยก (โทรออก/รับสาย/สายไม่ได้รับ) แม่นยำแม้จอดับ
+- 🌙 สรุปการใช้งานรายวันตอนเที่ยงคืน
+- ⏹️ นับเฉพาะแอปเต็มหน้าจอ → ป๊อปอัพเล็ก (PiP) และนำทางพื้นหลังไม่ถูกนับ
+- 💾 เก็บประวัติในเครื่องด้วย Room (ลบข้อมูลเก่ากว่า 30 วันอัตโนมัติ)
+
+### วิธีใช้ (ย่อ)
+1. เปิดใน Android Studio → **Build APK** → ติดตั้งบนเครื่องเป้าหมาย
+2. สร้าง Telegram Bot กับ **@BotFather** เอา Token + Chat ID
+3. ในแอป: เปิดสิทธิ์ → ใส่ Token/Chat ID → ส่งข้อความทดสอบ → เริ่มติดตาม
+
+### หมายเหตุความเป็นส่วนตัว
+เป็นโปรเจคส่วนตัว/ดูแลครอบครัว — ต้องกดอนุญาต "Usage Access" บนเครื่องที่ถูกติดตามเอง ติดตั้งลับไม่ได้ และควรให้เจ้าของเครื่องรับรู้ / ไม่มีการเก็บ token หรือข้อมูลส่วนตัวไว้ใน repo นี้
