@@ -17,6 +17,7 @@ import com.family.usagemonitor.data.AppSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
@@ -41,11 +42,20 @@ class UsageMonitorService : Service() {
     private lateinit var prefs: Prefs
     private lateinit var db: AppDatabase
     private lateinit var ignore: Set<String>
+    @Volatile
     private var telegram: TelegramClient? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var pollJob: Job? = null
     private var callTracker: CallTracker? = null
+
+    // คิวข้อความ Telegram — แยกการส่งออกจากการตรวจจับ กันลูปตรวจจับค้างตอนส่ง
+    private val sendChannel = Channel<String>(Channel.UNLIMITED)
+
+    /** โยนข้อความเข้าคิว (ไม่บล็อก) */
+    private fun enqueue(message: String) {
+        sendChannel.trySend(message)
+    }
 
     private var lastQueryTime = 0L
 
@@ -82,6 +92,17 @@ class UsageMonitorService : Service() {
         callTracker = CallTracker(this) { type, durationMs ->
             scope.launch { handleCall(type, durationMs) }
         }
+
+        // coroutine ส่งข้อความจากคิวทีละอัน (แยกจากลูปตรวจจับ)
+        scope.launch {
+            for (message in sendChannel) {
+                try {
+                    telegram?.send(message)
+                } catch (e: Exception) {
+                    Log.e(TAG, "ส่งข้อความจากคิวล้มเหลว", e)
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -96,7 +117,7 @@ class UsageMonitorService : Service() {
             } catch (e: Exception) {
                 Log.w(TAG, "เริ่ม CallTracker ไม่ได้ (อาจยังไม่ได้ให้สิทธิ์โทรศัพท์)", e)
             }
-            scope.launch { telegram?.send("✅ <b>เริ่มติดตามการใช้แอปแล้ว</b>") }
+            enqueue("✅ <b>เริ่มติดตามการใช้แอปแล้ว</b>")
         }
         return START_STICKY
     }
@@ -164,7 +185,7 @@ class UsageMonitorService : Service() {
         curStart = ts
         pauseAt = 0L
 
-        telegram?.send("📱 <b>เปิดแอป</b>: <code>${Util.esc(label)}</code>\n🕐 ${Util.clock(ts)} น.")
+        enqueue("📱 <b>เปิดแอป</b>: <code>${Util.esc(label)}</code>\n🕐 ${Util.clock(ts)} น.")
     }
 
     /** ปิดเซสชันที่กำลังเปิดอยู่ (คำนวณเวลา + บันทึก + แจ้งเตือน) */
@@ -197,7 +218,7 @@ class UsageMonitorService : Service() {
         }
 
         if (prefs.notifyOnExit) {
-            telegram?.send("❎ <b>ออกจาก</b> <code>${Util.esc(label)}</code>\n⏱️ ใช้ไป ${Util.humanDuration(duration)}")
+            enqueue("❎ <b>ออกจาก</b> <code>${Util.esc(label)}</code>\n⏱️ ใช้ไป ${Util.humanDuration(duration)}")
         }
     }
 
@@ -215,7 +236,7 @@ class UsageMonitorService : Service() {
         } else {
             "$label\n⏱️ คุยไป ${Util.humanDuration(durationMs)}"
         }
-        telegram?.send(message)
+        enqueue(message)
 
         try {
             db.sessionDao().insert(
