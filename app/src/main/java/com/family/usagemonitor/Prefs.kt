@@ -19,6 +19,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("notify_exit", true)
         set(v) = sp.edit().putBoolean("notify_exit", v).apply()
 
+    /** ผู้ใช้สั่งให้ติดตามอยู่หรือไม่ (ไว้เปิด service ให้เองเมื่อเปิดแอป/รีบูต) */
+    var trackingEnabled: Boolean
+        get() = sp.getBoolean("tracking_enabled", false)
+        set(v) = sp.edit().putBoolean("tracking_enabled", v).apply()
+
     /** ตัดเซสชันที่สั้นกว่า X มิลลิวินาที (กันสแปมตอนสลับแอปผ่านๆ) */
     val minSessionMs: Long get() = 3_000L
 

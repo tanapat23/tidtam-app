@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         b.btnTestSummary.setOnClickListener { sendTodaySummary() }
 
         b.btnStop.setOnClickListener {
+            prefs.trackingEnabled = false
             UsageMonitorService.stop(this)
             toast("หยุดการติดตามแล้ว")
             refreshStatus()
@@ -86,6 +87,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // ถ้าเคยสั่งติดตามไว้ + พร้อม → เปิด service ให้เองเมื่อเปิดแอป (กันกรณี service ตาย)
+        if (prefs.trackingEnabled && prefs.isConfigured && UsageAccess.isGranted(this)) {
+            UsageMonitorService.start(this)
+            DailySummaryWorker.schedule(this)
+        }
         refreshStatus()
     }
 
@@ -104,6 +110,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        prefs.trackingEnabled = true
         UsageMonitorService.start(this)
         DailySummaryWorker.schedule(this)
         toast("บันทึกและเริ่มติดตามแล้ว ✅")

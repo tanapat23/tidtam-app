@@ -16,6 +16,7 @@ import com.family.usagemonitor.data.AppDatabase
 import com.family.usagemonitor.data.AppSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
@@ -260,6 +261,7 @@ class UsageMonitorService : Service() {
         } catch (_: Exception) {
         }
         pollJob?.cancel()
+        scope.cancel()   // ยกเลิก coroutine ที่ค้างทั้งหมด (instance ใหม่จะมี scope ใหม่)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
