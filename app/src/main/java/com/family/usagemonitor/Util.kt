@@ -33,22 +33,33 @@ object Util {
         }
     }
 
-    // จำผลว่าแต่ละแพ็กเกจ "เปิดเองได้ไหม" กันเช็กซ้ำบ่อยๆ
-    private val launchableCache = HashMap<String, Boolean>()
+    // เซ็ตของแพ็กเกจที่มีไอคอนใน launcher (โหลดครั้งเดียว)
+    @Volatile
+    private var launchableSet: Set<String>? = null
+
+    private fun loadLaunchableSet(context: Context): Set<String> {
+        launchableSet?.let { return it }
+        val set = try {
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            context.packageManager.queryIntentActivities(intent, 0)
+                .mapNotNull { it.activityInfo?.packageName }
+                .toSet()
+        } catch (_: Exception) {
+            emptySet()
+        }
+        launchableSet = set
+        return set
+    }
 
     /**
      * แอปนี้เป็นแอปที่ผู้ใช้เปิดเองได้จริงไหม (มีไอคอนใน launcher)
-     * ใช้กรองพวก service/แอประบบ ที่แว้บขึ้นหน้าจอเองออกไป ไม่ให้ถูกนับเป็น "เปิดแอป"
+     * ใช้กรองพวก service/แอประบบ ที่แว้บขึ้นหน้าจอเองออกไป
+     * ⚠️ ถ้าอ่านรายชื่อแอปไม่ได้ (เซ็ตว่าง) จะปล่อยผ่านทั้งหมด — กันเผลอเงียบทุกแอป
      */
     fun isLaunchable(context: Context, pkg: String): Boolean {
-        launchableCache[pkg]?.let { return it }
-        val result = try {
-            context.packageManager.getLaunchIntentForPackage(pkg) != null
-        } catch (_: Exception) {
-            true  // เช็กไม่ได้ → ให้ผ่าน (กันเผลอกรองแอปจริงทิ้ง)
-        }
-        launchableCache[pkg] = result
-        return result
+        val set = loadLaunchableSet(context)
+        if (set.isEmpty()) return true   // เช็กไม่ได้ → อย่าบล็อก
+        return pkg in set
     }
 
     /** ดึงชื่อแอปที่อ่านง่าย จาก package name */
