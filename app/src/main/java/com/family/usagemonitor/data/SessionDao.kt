@@ -28,6 +28,10 @@ interface SessionDao {
     /** ลบข้อมูลเก่ากว่า dayKey ที่กำหนด (กันฐานข้อมูลบวม) */
     @Query("DELETE FROM app_sessions WHERE dayKey < :beforeDayKey")
     suspend fun deleteOlderThan(beforeDayKey: String)
+
+    /** ลบข้อมูลตั้งแต่วัน dayKey ลงไป (รวมวันนั้นด้วย) — ใช้ล้างหลังส่งสรุปเที่ยงคืน */
+    @Query("DELETE FROM app_sessions WHERE dayKey <= :dayKey")
+    suspend fun deleteUpToIncluding(dayKey: String)
 }
 
 /** ผลลัพธ์การสรุปต่อแอปต่อวัน */

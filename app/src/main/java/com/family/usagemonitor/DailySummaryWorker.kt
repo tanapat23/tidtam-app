@@ -21,13 +21,14 @@ class DailySummaryWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        // ส่งสรุปของวันที่ถูกต้อง (กันกรณี WorkManager เด้งก่อน/หลังเที่ยงคืน)
-        sendSummary(applicationContext, targetDayKey())
+        val dayKey = targetDayKey()
 
-        // ลบข้อมูลเก่ากว่า 30 วัน กันฐานข้อมูลบวม
-        val old = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -30) }
+        // 1) ส่งสรุปของวันนั้นเข้า Telegram ก่อน (ประวัติเก็บใน Telegram)
+        sendSummary(applicationContext, dayKey)
+
+        // 2) แล้วลบข้อมูลของวันนั้นและก่อนหน้าทิ้ง (เก็บเฉพาะวันใหม่) กันเปลืองพื้นที่
         AppDatabase.get(applicationContext)
-            .sessionDao().deleteOlderThan(Util.dayKey(old.timeInMillis))
+            .sessionDao().deleteUpToIncluding(dayKey)
 
         return Result.success()
     }
